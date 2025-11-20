@@ -122,71 +122,41 @@ class TestCoerceToPricesComprehensive:
 class TestDownloadStockDataComprehensive:
     """Tests exhaustivos adicionales para download_stock_data."""
 
+    @patch("ff5_portfolio.data_loader._validate_tickers", return_value=(["HIGHNAN"], []))
     @patch("ff5_portfolio.data_loader.yf.download")
-    @patch("ff5_portfolio.data_loader.sleep")
-    def test_with_different_batch_sizes(self, mock_sleep, mock_download):
-        """Test con diferentes tamaños de batch."""
-        dates = pd.date_range("2020-01-01", periods=30, freq="ME")
-        np.random.seed(42)
-        prices = 100 * (1 + np.random.normal(0.01, 0.05, len(dates))).cumprod()
-        
-        mock_data = pd.DataFrame(
-            {("Adj Close", "AAPL"): prices},
-            index=dates,
-        )
-        mock_data.columns = pd.MultiIndex.from_tuples(mock_data.columns)
-        mock_download.return_value = mock_data
-        
-        for batch_size in [1, 5, 10, 50]:
-            returns, _ = download_stock_data(
-                ["AAPL"], "2020-01-01", "2022-01-01",
-                batch_size=batch_size,
-                min_months=12
-            )
-            assert not returns.empty
-
-    @patch("ff5_portfolio.data_loader.yf.download")
-    @patch("ff5_portfolio.data_loader.sleep")
-    def test_with_high_nan_ratio(self, mock_sleep, mock_download):
+    def test_with_high_nan_ratio(self, mock_download, mock_validate):
         """Test con series con muchos NaN."""
-        dates = pd.date_range("2020-01-01", periods=30, freq="ME")
-        # Crear precios con algunos NaN pero suficientes datos válidos
-        prices = 100 * (1 + np.random.normal(0.01, 0.05, len(dates))).cumprod()
-        prices_series = pd.Series(prices, index=dates)
-        prices_series.loc[dates[:10]] = np.nan  # 10/30 = 33% NaN (bajo threshold)
-        
-        mock_data = pd.DataFrame(
-            {("Adj Close", "AAPL"): prices_series},
-            index=dates,
+        dates = pd.date_range("2020-01-01", periods=36, freq="ME")
+        prices = pd.Series(np.random.rand(len(dates)), index=dates)
+        prices.iloc[5:30] = np.nan
+        mock_download.return_value = pd.DataFrame(
+            {("Adj Close", "HIGHNAN"): prices}, index=dates
         )
-        mock_data.columns = pd.MultiIndex.from_tuples(mock_data.columns)
-        mock_download.return_value = mock_data
-        
-        # Debería pasar el filtro de NaN (max_nan_frac = 0.90) y tener suficientes meses
-        returns, _ = download_stock_data(
-            ["AAPL"], "2020-01-01", "2022-01-01",
-            min_months=12
+        mock_download.return_value.columns = pd.MultiIndex.from_tuples(
+            mock_download.return_value.columns
         )
-        # Debería tener datos válidos
-        assert isinstance(returns, pd.DataFrame)
-        assert len(returns.columns) > 0
+
+        returns, skipped = download_stock_data(
+            ["HIGHNAN"], "2020-01-01", "2022-12-31", min_months=12
+        )
+
+        assert "HIGHNAN" in returns.columns
+        assert len(skipped) == 0
 
     def test_invalid_date_range(self):
         """Test con rango de fechas inválido."""
         with pytest.raises((ValueError, Exception)):
             download_stock_data(
-                ["AAPL"], "2025-01-01", "2020-01-01",  # Fecha fin antes de inicio
-                min_months=12
+                ["AAPL"], "2025-01-01", "2020-01-01", min_months=12
             )
 
+    @patch("ff5_portfolio.data_loader._validate_tickers", return_value=([], ["INVALID"]))
     @patch("ff5_portfolio.data_loader.yf.download")
-    @patch("ff5_portfolio.data_loader.sleep")
-    def test_with_all_columns_empty(self, mock_sleep, mock_download):
-        """Test cuando todas las columnas están vacías."""
-        mock_data = pd.DataFrame()
-        mock_download.return_value = mock_data
-        
-        with pytest.raises(ValueError, match="No se obtuvieron datos"):
+    def test_with_all_columns_empty(self, mock_download, mock_validate):
+        """Test cuando yfinance retorna un DataFrame con columnas pero sin datos."""
+        mock_download.return_value = pd.DataFrame()
+
+        with pytest.raises(ValueError, match="Todos los tickers proporcionados son inválidos o delisted."):
             download_stock_data(["INVALID"], "2020-01-01", "2022-01-01")
 
 
@@ -278,52 +248,59 @@ Skip
 class TestGetStockMetadataComprehensive:
     """Tests exhaustivos adicionales para get_stock_metadata."""
 
-    @patch("ff5_portfolio.data_loader.yf.Ticker")
-    def test_with_none_sector(self, mock_ticker_class):
+    @patch("ff5_portfolio.data_loader.yf.Tickers")
+    def test_with_none_sector(self, mock_tickers_class):
         """Test cuando sector es None."""
-        mock_ticker = Mock()
-        mock_ticker.info = {"sector": None}
-        mock_ticker_class.return_value = mock_ticker
+        mock_info = Mock()
+        mock_info.info = {"sector": None}
+        mock_tickers_instance = Mock()
+        mock_tickers_instance.tickers = [mock_info]
+        mock_tickers_class.return_value = mock_tickers_instance
         
         meta = get_stock_metadata(["AAPL"])
         
         assert meta.loc["AAPL", "sector"] == "Unknown"
 
-    @patch("ff5_portfolio.data_loader.yf.Ticker")
-    def test_with_empty_info_dict(self, mock_ticker_class):
+    @patch("ff5_portfolio.data_loader.yf.Tickers")
+    def test_with_empty_info_dict(self, mock_tickers_class):
         """Test con info vacío."""
-        mock_ticker = Mock()
-        mock_ticker.info = {}
-        mock_ticker_class.return_value = mock_ticker
+        mock_info = Mock()
+        mock_info.info = {}
+        mock_tickers_instance = Mock()
+        mock_tickers_instance.tickers = [mock_info]
+        mock_tickers_class.return_value = mock_tickers_instance
         
         meta = get_stock_metadata(["AAPL"])
         
         assert meta.loc["AAPL", "sector"] == "Unknown"
 
-    @patch("ff5_portfolio.data_loader.yf.Ticker")
-    def test_with_mixed_success_failure(self, mock_ticker_class):
+    @patch("ff5_portfolio.data_loader.yf.Tickers")
+    def test_with_mixed_success_failure(self, mock_tickers_class):
         """Test cuando algunos tickers fallan y otros no."""
-        def side_effect(ticker):
-            mock = Mock()
-            if ticker == "AAPL":
-                mock.info = {"sector": "Technology"}
-            else:
-                raise Exception("Ticker error")
-            return mock
+        mock_info_success = Mock()
+        mock_info_success.info = {"sector": "Technology"}
+
+        mock_info_fail = Mock()
+        mock_info_fail.info = {}
         
-        mock_ticker_class.side_effect = side_effect
+        mock_tickers_instance = Mock()
+        mock_tickers_instance.tickers = [mock_info_success, mock_info_fail]
+        mock_tickers_class.return_value = mock_tickers_instance
         
         meta = get_stock_metadata(["AAPL", "INVALID"])
         
         assert meta.loc["AAPL", "sector"] == "Technology"
         assert meta.loc["INVALID", "sector"] == "Unknown"
 
-    @patch("ff5_portfolio.data_loader.yf.Ticker")
-    def test_with_very_long_ticker_list(self, mock_ticker_class):
+    @patch("ff5_portfolio.data_loader.yf.Tickers")
+    def test_with_very_long_ticker_list(self, mock_tickers_class):
         """Test con lista muy larga de tickers."""
-        mock_ticker = Mock()
-        mock_ticker.info = {"sector": "Technology"}
-        mock_ticker_class.return_value = mock_ticker
+        mock_info = Mock()
+        mock_info.info = {"sector": "Technology"}
+
+        mock_tickers_instance = Mock()
+        mock_tickers_instance.tickers = [mock_info] * 50
+        mock_tickers_class.return_value = mock_tickers_instance
         
         tickers = [f"TICKER_{i}" for i in range(50)]
         meta = get_stock_metadata(tickers)

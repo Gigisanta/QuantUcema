@@ -51,33 +51,52 @@ class TestNormalizeTickers:
 class TestDownloadStockData:
     """Tests para download_stock_data."""
 
+    @patch("ff5_portfolio.data_loader._validate_tickers", return_value=(["AAPL", "MSFT"], []))
     @patch("ff5_portfolio.data_loader.yf.download")
-    @patch("ff5_portfolio.data_loader.sleep")
-    def test_basic_download(self, mock_sleep, mock_download):
+    def test_basic_download(self, mock_download, mock_validate):
         """Test descarga básica de datos."""
-        # Mock de datos de yfinance - generar suficientes meses
         dates = pd.date_range("2020-01-01", periods=30, freq="ME")
-        np.random.seed(42)
-        prices_aapl = 100 * (1 + np.random.normal(0.01, 0.05, len(dates))).cumprod()
-        prices_msft = 200 * (1 + np.random.normal(0.01, 0.05, len(dates))).cumprod()
-        
-        mock_data = pd.DataFrame(
+        mock_prices = pd.DataFrame(
             {
-                ("Adj Close", "AAPL"): prices_aapl,
-                ("Adj Close", "MSFT"): prices_msft,
+                ("Adj Close", "AAPL"): np.random.rand(len(dates)),
+                ("Adj Close", "MSFT"): np.random.rand(len(dates)),
             },
             index=dates,
         )
-        mock_data.columns = pd.MultiIndex.from_tuples(mock_data.columns)
-        mock_download.return_value = mock_data
+        mock_prices.columns = pd.MultiIndex.from_tuples(mock_prices.columns)
+        mock_download.return_value = mock_prices
 
         returns, skipped = download_stock_data(
-            ["AAPL", "MSFT"], "2020-01-01", "2022-01-01", batch_size=10, min_months=12
+            ["AAPL", "MSFT"], "2020-01-01", "2022-01-01", min_months=12
         )
 
         assert isinstance(returns, pd.DataFrame)
-        assert len(returns.columns) > 0
+        assert "AAPL" in returns.columns
+        assert "MSFT" in returns.columns
         assert len(skipped) == 0
+
+    @patch("ff5_portfolio.data_loader._validate_tickers", return_value=(["AAPL"], []))
+    @patch("ff5_portfolio.data_loader.yf.download")
+    def test_local_cache_reuses_returns(self, mock_download, mock_validate, monkeypatch, tmp_path):
+        """Test que el cache local evita descargas repetidas."""
+        # Configurar mock de descarga
+        dates = pd.date_range("2020-01-01", periods=36, freq="ME")
+        mock_prices = pd.DataFrame(
+            {("Adj Close", "AAPL"): np.random.rand(len(dates))}, index=dates
+        )
+        mock_prices.columns = pd.MultiIndex.from_tuples(mock_prices.columns)
+        mock_download.return_value = mock_prices
+
+        # Configurar directorio de cache temporal
+        monkeypatch.setattr(data_loader_module, "RETURNS_CACHE_DIR", tmp_path)
+
+        # Primera llamada (debería descargar)
+        download_stock_data(["AAPL"], "2020-01-01", "2022-12-31", use_local_cache=True)
+        assert mock_download.call_count == 1
+
+        # Segunda llamada (debería usar cache)
+        download_stock_data(["AAPL"], "2020-01-01", "2022-12-31", use_local_cache=True)
+        assert mock_download.call_count == 1
 
     def test_empty_tickers(self):
         """Test que falla con tickers vacíos."""
@@ -88,61 +107,12 @@ class TestDownloadStockData:
     @patch("ff5_portfolio.data_loader.sleep")
     def test_all_failed_download(self, mock_sleep, mock_download):
         """Test cuando todas las descargas fallan."""
-        mock_download.side_effect = Exception("Download failed")
+        mock_download.return_value = pd.DataFrame() # Simula una descarga vacía
 
-        with pytest.raises(ValueError, match="No se obtuvieron datos"):
+        # Ahora la función debería lanzar un error porque los tickers son inválidos antes de descargar
+        with pytest.raises(ValueError, match="Todos los tickers proporcionados son inválidos o delisted."):
             download_stock_data(["INVALID"], "2020-01-01", "2022-01-01")
 
-    def test_local_cache_reuses_returns(self, monkeypatch, tmp_path):
-        """Test que el cache local evita descargas repetidas."""
-        dates = pd.date_range("2019-12-31", periods=36, freq="ME")
-        sample_returns = pd.Series(
-            np.random.normal(0.01, 0.02, len(dates)),
-            index=dates,
-            name="AAPL",
-        )
-
-        call_counter = {"count": 0}
-
-        def fake_parallel(**kwargs):
-            call_counter["count"] += 1
-            return {"AAPL": sample_returns}, []
-
-        monkeypatch.setattr(data_loader_module, "_download_returns_parallel", fake_parallel)
-        cache_dir = tmp_path / "returns_cache"
-        monkeypatch.setattr(data_loader_module, "RETURNS_CACHE_DIR", cache_dir)
-
-        returns_first, skipped_first = download_stock_data(
-            ["AAPL"],
-            "2020-01-01",
-            "2022-12-31",
-            batch_size=10,
-            min_months=12,
-            use_local_cache=True,
-            cache_ttl_seconds=999999,
-        )
-
-        assert "AAPL" in returns_first.columns
-        assert skipped_first == []
-        assert call_counter["count"] == 1
-
-        def fail_parallel(**kwargs):
-            pytest.fail("El cache debería evitar nuevas descargas")
-
-        monkeypatch.setattr(data_loader_module, "_download_returns_parallel", fail_parallel)
-
-        returns_cached, skipped_cached = download_stock_data(
-            ["AAPL"],
-            "2020-01-01",
-            "2022-12-31",
-            batch_size=10,
-            min_months=12,
-            use_local_cache=True,
-            cache_ttl_seconds=999999,
-        )
-
-        assert "AAPL" in returns_cached.columns
-        assert skipped_cached == []
 
 
 class TestDownloadFF5Factors:
@@ -200,13 +170,15 @@ This line is skipped
 class TestGetStockMetadata:
     """Tests para get_stock_metadata."""
 
-    @patch("ff5_portfolio.data_loader.yf.Ticker")
-    def test_basic_metadata(self, mock_ticker_class):
+    @patch("ff5_portfolio.data_loader.yf.Tickers")
+    def test_basic_metadata(self, mock_tickers_class):
         """Test obtención básica de metadatos."""
-        # Mock de Ticker
-        mock_ticker = Mock()
-        mock_ticker.info = {"sector": "Technology"}
-        mock_ticker_class.return_value = mock_ticker
+        # Mock para yf.Tickers(...).tickers
+        mock_ticker_info = Mock()
+        mock_ticker_info.info = {"sector": "Technology"}
+        mock_tickers_instance = Mock()
+        mock_tickers_instance.tickers = [mock_ticker_info]
+        mock_tickers_class.return_value = mock_tickers_instance
 
         meta = get_stock_metadata(["AAPL"])
 

@@ -5,6 +5,7 @@ Carga de datos para la aplicación Streamlit.
 import streamlit as st
 
 from ff5_portfolio.data_loader import (
+    _clean_and_validate_data,
     download_ff5_factors,
     download_stock_data,
     get_sp500_tickers,
@@ -13,64 +14,6 @@ from ff5_portfolio.data_loader import (
 from ff5_portfolio.logging_config import get_logger
 
 logger = get_logger(__name__)
-
-
-@st.cache_data(ttl=86400)  # Cache por 24 horas
-def cached_download_ff5_factors():
-    """Cachea factores FF5 que cambian raramente."""
-    try:
-        return download_ff5_factors()
-    except Exception as e:
-        logger.error("Error al descargar factores FF5 del cache: %s", e)
-        raise
-
-
-@st.cache_data(ttl=43200)  # Cache por 12 horas
-def cached_get_stock_metadata(tickers_str):
-    """Cachea metadatos de tickers."""
-    try:
-        tickers_list = tickers_str.split(",") if isinstance(tickers_str, str) else tickers_str
-        return get_stock_metadata(tickers_list)
-    except Exception as e:
-        logger.error("Error al descargar metadatos del cache: %s", e)
-        raise
-
-
-@st.cache_data(ttl=3600, max_entries=10)  # Cache por 1 hora, máximo 10 entradas
-def cached_download_stock_data(tickers_str, start_date, end_date, min_months, validate_tickers):
-    """Cachea descarga de datos de acciones basado en parámetros."""
-    try:
-        tickers_list = tickers_str.split(",") if isinstance(tickers_str, str) else tickers_str
-        return download_stock_data(
-            tickers_list,
-            start_date,
-            end_date,
-            min_months=min_months,
-            validate_tickers=validate_tickers
-        )
-    except Exception as e:
-        logger.error("Error al descargar datos de acciones del cache: %s", e)
-        raise
-
-
-@st.cache_data(ttl=86400)
-def cached_sp500_universe():
-    """Cachea la lista completa del S&P 500."""
-    try:
-        return get_sp500_tickers(use_cache=False, cache=None)
-    except Exception as e:
-        logger.error("Error al descargar universo S&P 500 del cache: %s", e)
-        raise
-
-
-@st.cache_data(ttl=43200)  # Cache por 12 horas
-def cached_sp500_universe_validated():
-    """Cachea la lista del S&P 500 validada (sin tickers delisted)."""
-    try:
-        return get_sp500_tickers(use_cache=False, cache=None, validate_tickers=True)
-    except Exception as e:
-        logger.error("Error al descargar universo S&P 500 validado del cache: %s", e)
-        raise
 
 
 def load_all_data(
@@ -109,45 +52,29 @@ def load_all_data(
         progress_callback("📋 Obteniendo lista de tickers del S&P 500...")
     logger.info("Obteniendo tickers del S&P 500 (validación: %s)", validate_tickers)
     
-    try:
-        if validate_tickers:
-            sp500_tickers = cached_sp500_universe_validated()
-        else:
-            sp500_tickers = cached_sp500_universe()
-        logger.info("✓ %d tickers del S&P 500 obtenidos", len(sp500_tickers))
-    except Exception as cache_error:
-        logger.warning("Cache de tickers no disponible (%s). Intentando descarga directa...", cache_error)
-        try:
-            sp500_tickers = get_sp500_tickers(
-                use_cache=True,
-                cache=st.session_state,
-                validate_tickers=validate_tickers,
-            )
-            logger.info("✓ %d tickers del S&P 500 descargados directamente", len(sp500_tickers))
-        except RuntimeError as e2:
-            logger.error("Error crítico al obtener tickers: %s", e2)
-            raise RuntimeError(f"No se pudo obtener lista de tickers del S&P 500: {e2}")
-        except Exception as e2:
-            logger.error("Error inesperado al obtener tickers: %s", e2)
-            raise
+    sp500_tickers = get_sp500_tickers(use_cache=True, cache=st.session_state, validate_tickers=validate_tickers)
+    logger.info("✓ %d tickers del S&P 500 obtenidos", len(sp500_tickers))
     
     # 1. Descargar datos de acciones
     if progress_callback:
         progress_callback(f"📥 Descargando datos de {len(sp500_tickers)} acciones del S&P 500...")
     logger.info("Iniciando descarga de datos de acciones: %d tickers", len(sp500_tickers))
     
-    tickers_str = ",".join(sp500_tickers)
-    returns_m, skipped = cached_download_stock_data(
-        tickers_str,
+    returns_m, skipped = download_stock_data(
+        sp500_tickers,
         str(start_date),
         str(end_date),
         min_months=12,
-        validate_tickers=validate_tickers,
+        validate_tickers=False,  # Ya se validaron en el paso anterior
     )
     skipped_tickers.extend(skipped)
     
     if len(skipped) > 0:
         logger.warning("%d tickers no se pudieron descargar", len(skipped))
+
+    # Limpiar y validar datos
+    if not returns_m.empty:
+        returns_m = _clean_and_validate_data(returns_m)
     
     if returns_m.shape[1] == 0:
         logger.error("No se obtuvieron datos válidos después de descarga")
@@ -165,15 +92,14 @@ def load_all_data(
     if progress_callback:
         progress_callback("📥 Descargando factores FF5...")
     logger.info("Descargando factores FF5")
-    ff5_factors = cached_download_ff5_factors()
+    ff5_factors = download_ff5_factors(use_cache=True, cache=st.session_state)
     logger.info("✓ Factores FF5 descargados (%d meses)", len(ff5_factors))
     
     # 3. Obtener metadatos
     if progress_callback:
         progress_callback("📥 Obteniendo metadatos...")
     logger.info("Obteniendo metadatos para %d tickers", returns_m.shape[1])
-    tickers_str = ",".join(returns_m.columns.tolist())
-    meta = cached_get_stock_metadata(tickers_str)
+    meta = get_stock_metadata(returns_m.columns.tolist())
     logger.info("✓ Metadatos obtenidos para %d tickers", len(meta))
     
     # 4. Descargar SPY si se necesita IR
