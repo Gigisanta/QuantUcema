@@ -1,0 +1,54 @@
+---
+alwaysApply: true
+---
+
+# Convenciones de Finanzas Cuantitativas
+
+## Estructura de Datos Financieros
+
+### DataFrames de Retornos
+- **Index**: Fechas (fin de mes, tipo `pd.DatetimeIndex`)
+- **Columns**: Tickers (strings)
+- **Valores**: Retornos en decimales (0.01 = 1%), NO en porcentajes
+- **Naming**: Usar sufijo `_m` para mensual, `_annual` para anual
+- Ejemplo: `returns_m: pd.DataFrame` (retornos mensuales)
+
+### Factores FF5
+- **Columnas requeridas**: `["Mkt-RF", "SMB", "HML", "RMW", "CMA", "RF"]`
+- **Valores**: En decimales (0.01 = 1%)
+- **Index**: Fechas mensuales (fin de mes)
+- **Validación**: Siempre verificar que todas las columnas estén presentes
+
+### Metadatos
+- **Index**: Tickers
+- **Columnas**: `sector` (requerida), otras opcionales
+- **Manejo de valores faltantes**: Usar `"Unknown"` como default para sector
+
+## Conversiones de Frecuencia
+- **Mensual a Anual**: Multiplicar por 12 (retornos) o `sqrt(12)` (volatilidad)
+- **Ejemplo**:
+  ```python
+  ret_annual = returns_m.mean() * 12
+  vol_annual = returns_m.std() * np.sqrt(12)
+  ```
+
+## Constantes del Modelo
+- **Mínimo de observaciones**: 12 meses (definir como `MIN_OBSERVATIONS = 12`)
+- **Columnas FF5**: Definir como constante `REQUIRED_FF5_COLUMNS`
+- **Tolerancias numéricas**: Usar `1e-8` para comparaciones de cero
+
+## Alineación de Datos
+- **SIEMPRE** alinear fechas antes de operaciones: `common_dates = df1.index.intersection(df2.index)`
+- **SIEMPRE** alinear tickers cuando se combinan DataFrames: `common_tickers = df1.columns.intersection(df2.columns)`
+- Validar que hay datos comunes antes de proceder
+
+## Optimización de Carteras
+- **Pesos**: Arrays numpy, normalizados a sumar 1.0
+- **Validación**: Verificar que `w_max * n >= 1.0` para solución factible
+- **Método**: Usar `scipy.optimize.minimize` con método `SLSQP`
+- **Constraints**: Suma de pesos = 1.0, bounds por activo
+
+## Validaciones Específicas
+- Verificar que matrices de covarianza sean positivas semidefinidas
+- Validar que retornos esperados sean razonables (ej: `abs() < 2.0` para anuales)
+- Verificar alineación de índices antes de operaciones matriciales

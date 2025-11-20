@@ -1,0 +1,152 @@
+---
+alwaysApply: true
+---
+
+# Guías de Testing para ff5_portfolio
+
+## Estructura de Tests
+
+### Organización
+- **Ubicación**: Todos los tests en `tests/`
+- **Naming**: `test_<module_name>.py` (ej: `test_factors.py`, `test_optimization.py`)
+- **Estructura**: Usar clases `Test<FunctionName>` para agrupar tests relacionados
+
+### Ejemplo de Estructura
+```python
+class TestEstimateFF5Betas:
+    """Tests para estimate_ff5_betas."""
+    
+    def test_basic_functionality(self, sample_returns, sample_ff5_factors):
+        """Test básico de estimación de betas."""
+        # ...
+    
+    def test_missing_columns(self, sample_returns):
+        """Test que falla correctamente con columnas faltantes."""
+        # ...
+```
+
+## Fixtures de pytest
+
+### Fixtures Comunes
+- `sample_ff5_factors`: Factores FF5 de ejemplo (24+ meses)
+- `sample_returns`: Retornos mensuales de ejemplo (múltiples tickers)
+- `sample_meta`: Metadatos de ejemplo (sectores)
+- `sample_betas`: Betas FF5 de ejemplo
+- `sample_alphas`: Alphas mensuales de ejemplo
+
+### Características de Fixtures
+- **Reproducibilidad**: Usar `np.random.seed(42)` para datos sintéticos
+- **Realismo**: Valores razonables para finanzas (retornos ~0.01, volatilidad ~0.05)
+- **Tamaño**: Suficiente para tests (ej: 24 meses, 5 tickers)
+
+### Ejemplo
+```python
+@pytest.fixture
+def sample_ff5_factors():
+    """Factores FF5 de ejemplo (24 meses)."""
+    dates = pd.date_range("2020-01-01", periods=24, freq="M")
+    np.random.seed(42)
+    return pd.DataFrame(
+        {
+            "Mkt-RF": np.random.normal(0.01, 0.05, 24),
+            "SMB": np.random.normal(0.002, 0.03, 24),
+            # ...
+        },
+        index=dates,
+    )
+```
+
+## Tipos de Tests
+
+### Tests de Funcionalidad Básica
+- Verificar que la función retorna el tipo correcto
+- Verificar que los resultados tienen la estructura esperada
+- Verificar que los valores son razonables
+
+### Tests de Validación
+- Verificar que se lanzan excepciones correctas con inputs inválidos
+- Verificar mensajes de error descriptivos
+- Ejemplo: `test_missing_columns`, `test_no_common_dates`
+
+### Tests de Casos Límite
+- Datos vacíos
+- Un solo activo/ticker
+- Fechas sin intersección
+- Tickers sin datos comunes
+
+### Tests de Integración
+- Pipeline completo (`build_gio_portfolios`)
+- Flujo end-to-end con datos sintéticos
+- Verificar que todos los componentes funcionan juntos
+
+## Assertions
+
+### Estructura de Datos
+```python
+assert isinstance(betas, pd.DataFrame)
+assert isinstance(alphas, pd.Series)
+assert len(betas) > 0
+```
+
+### Valores Esperados
+```python
+assert np.isclose(weights.sum(), 1.0, rtol=1e-5)
+assert all(weights >= -1e-6)  # Long-only aproximadamente
+```
+
+### Excepciones
+```python
+with pytest.raises(ValueError, match="Faltan columnas requeridas"):
+    estimate_ff5_betas(sample_returns, bad_factors)
+```
+
+## Buenas Prácticas
+
+### Un Test, Un Comportamiento
+- Cada test verifica un comportamiento específico
+- Nombres descriptivos que explican qué se prueba
+- Evitar tests que verifican múltiples cosas no relacionadas
+
+### Tests Independientes
+- Cada test debe poder ejecutarse en cualquier orden
+- No depender de estado de tests anteriores
+- Usar fixtures para setup, no variables globales
+
+### Datos de Prueba
+- Usar datos sintéticos cuando sea posible (reproducibilidad)
+- Datos reales solo cuando sea necesario para casos específicos
+- Mantener fixtures pequeñas y enfocadas
+
+### Cobertura
+- Tests para todas las funciones públicas
+- Tests para casos de error importantes
+- No es necesario 100% de cobertura, pero sí de funciones críticas
+
+## Ejecución
+
+### Comando Básico
+```bash
+pytest tests/ -v
+```
+
+### Tests Específicos
+```bash
+pytest tests/test_factors.py::TestEstimateFF5Betas -v
+```
+
+### Con Cobertura (opcional)
+```bash
+pytest tests/ --cov=ff5_portfolio --cov-report=html
+```
+
+## Mantenimiento
+
+### Actualizar Tests
+- Cuando se cambia una función, actualizar tests relacionados
+- Agregar tests para nuevos casos límite descubiertos
+- Eliminar tests obsoletos
+
+### Debugging
+- Usar `pytest -v` para ver qué tests fallan
+- Usar `pytest --pdb` para entrar en debugger en fallos
+- Verificar fixtures si tests fallan inesperadamente

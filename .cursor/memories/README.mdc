@@ -1,0 +1,33 @@
+# Memorias de Cursor para ff5_portfolio
+
+Este directorio contiene documentación sobre memorias recomendadas para el proyecto.
+
+## Contenido
+
+- **`suggested-memories.mdc`**: Lista completa de memorias sugeridas organizadas por categoría
+
+## ¿Qué son las Memorias?
+
+Las memorias son reglas generadas automáticamente o manualmente que ayudan al agente de Cursor a recordar información importante sobre el proyecto entre sesiones.
+
+## Cómo Usar
+
+1. **Revisar** `suggested-memories.mdc` para ver las memorias recomendadas
+2. **Crear memorias** en Cursor Settings > Rules > Memories:
+   - Manualmente: copiar y pegar las memorias sugeridas
+   - Automáticamente: el agente las creará durante conversaciones relevantes (requieren aprobación)
+
+## Categorías de Memorias
+
+- Estructura del Proyecto
+- Convenciones de Código
+- Datos Financieros
+- Optimización
+- Testing
+- Principios de Diseño
+
+## Notas
+
+- Las memorias son específicas del proyecto
+- Se aplican solo dentro del contexto de este repositorio
+- Pueden actualizarse cuando cambien las convenciones

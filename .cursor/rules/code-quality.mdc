@@ -1,0 +1,124 @@
+---
+alwaysApply: true
+---
+
+# Calidad de Código y Mejores Prácticas
+
+## Principios Fundamentales
+
+### DRY (Don't Repeat Yourself)
+- **NO** duplicar lógica entre módulos
+- Si la misma lógica aparece 2+ veces, extraer a función helper
+- Ejemplo: `_normalize_tickers()` en `data_loader.py` evita duplicación
+
+### Funciones Pequeñas y Enfocadas
+- **Límite recomendado**: ~40-50 líneas por función
+- **Una responsabilidad**: Cada función hace UNA cosa bien
+- Si una función tiene múltiples propósitos, dividirla
+
+### Legibilidad sobre "Clever Hacks"
+- Código debe ser auto-explicativo
+- Comentarios explican "por qué", no "cómo"
+- Si necesitas comentar mucho el "cómo", refactorizar
+
+### Nombres Significativos
+- Variables: `returns_m` es mejor que `r` o `data`
+- Funciones: `build_universe_gio` es mejor que `build_universe` o `gio`
+- Evitar abreviaciones crípticas
+
+## Manejo de Datos
+
+### Validación Temprana
+- Validar inputs al inicio de funciones
+- Mensajes de error descriptivos que explican qué falló
+- Ejemplo:
+  ```python
+  missing_cols = set(REQUIRED_FF5_COLUMNS) - set(ff5_factors.columns)
+  if missing_cols:
+      raise ValueError(
+          f"Faltan columnas requeridas en ff5_factors: {missing_cols}. "
+          f"Columnas requeridas: {REQUIRED_FF5_COLUMNS}"
+      )
+  ```
+
+### Manejo de NaN
+- Filtrar NaN antes de cálculos cuando sea necesario
+- Usar `dropna()` con cuidado, documentar criterios
+- Validar que hay suficientes datos después de filtrar
+
+### Alineación de Índices
+- **SIEMPRE** alinear fechas/tickers antes de operaciones
+- Usar `intersection()` para encontrar comunes
+- Validar que hay datos comunes antes de proceder
+
+## Optimización y Performance
+
+### Operaciones Vectorizadas
+- Preferir operaciones pandas/numpy sobre loops
+- Ejemplo: `returns_m.mean() * 12` en lugar de loop sobre columnas
+
+### Lazy Evaluation
+- No descargar datos hasta que se necesiten
+- Permitir que el usuario pase datos ya preparados
+
+### Memoria
+- Limpiar DataFrames grandes cuando ya no se necesiten
+- Usar `del` o dejar que el GC maneje cuando sea apropiado
+
+## Testing
+
+### Cobertura
+- Tests para funciones principales
+- Tests de casos límite (datos faltantes, tamaños inconsistentes)
+- Tests de validación de inputs
+
+### Fixtures
+- Usar fixtures de pytest para datos de prueba
+- Reutilizar fixtures entre tests relacionados
+- Ejemplo: `sample_ff5_factors`, `sample_returns` en `test_ff5_portfolio.py`
+
+### Estructura de Tests
+- Organizar por clase: `TestEstimateFF5Betas`, `TestBuildUniverseGio`
+- Un test por comportamiento/escenario
+- Nombres descriptivos: `test_basic_functionality`, `test_missing_columns`
+
+## Documentación
+
+### Docstrings
+- **SIEMPRE** incluir docstring en funciones públicas
+- Formato Google style
+- Explicar "por qué" en decisiones importantes
+
+### Comentarios Inline
+- Solo cuando el "por qué" no es obvio
+- Evitar comentarios que repiten el código
+- Ejemplo útil:
+  ```python
+  # Convertir a fin de mes para alineación con factores FF5
+  prices.index = prices.index.to_period("M").to_timestamp("M")
+  ```
+
+## Manejo de Errores
+
+### Excepciones Específicas
+- `ValueError`: Inputs inválidos o faltantes
+- `RuntimeError`: Errores en tiempo de ejecución (descargas, parsing)
+- Mensajes descriptivos que ayudan a debuggear
+
+### Validación de Constraints
+- Verificar que optimizaciones tienen solución factible
+- Ejemplo: `if w_max * n < 1.0: raise ValueError(...)`
+
+## Refactoring
+
+### Señales de Necesidad
+- Funciones > 50 líneas
+- Lógica duplicada
+- Múltiples niveles de anidación (> 3)
+- Funciones con múltiples responsabilidades
+
+### Proceso
+1. Identificar el problema
+2. Escribir tests que cubran el comportamiento actual
+3. Refactorizar manteniendo tests pasando
+4. Verificar que no se rompió funcionalidad

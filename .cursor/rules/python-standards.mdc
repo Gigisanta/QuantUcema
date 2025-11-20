@@ -1,0 +1,75 @@
+---
+alwaysApply: true
+---
+
+# Estándares Python para ff5_portfolio
+
+## Type Hints
+- **SIEMPRE** usar type hints en todas las funciones y métodos
+- Usar tipos de pandas: `pd.DataFrame`, `pd.Series`
+- Usar `| None` para tipos opcionales (Python 3.10+): `pd.DataFrame | None`
+- Para versiones anteriores, usar `Optional[pd.DataFrame]` de `typing`
+- Ejemplo correcto:
+  ```python
+  def estimate_ff5_betas(
+      returns_m: pd.DataFrame, 
+      ff5_factors: pd.DataFrame
+  ) -> tuple[pd.DataFrame, pd.Series, float]:
+  ```
+
+## Docstrings
+- **SIEMPRE** usar formato Google style
+- Incluir secciones: Parameters, Returns, Raises cuando aplique
+- Documentar el "por qué" de decisiones importantes, no solo el "cómo"
+- Ejemplo:
+  ```python
+  """
+  Estima betas FF5 y alphas por activo usando regresión OLS.
+  
+  Parameters
+  ----------
+  returns_m : pd.DataFrame
+      Retornos mensuales de activos. Index = fechas, Columns = tickers.
+  ff5_factors : pd.DataFrame
+      Factores FF5 mensuales. Debe tener columnas: ["Mkt-RF", "SMB", "HML", "RMW", "CMA", "RF"].
+  
+  Returns
+  -------
+  betas : pd.DataFrame
+      Betas FF5 por ticker. Index = tickers, Columns = factores.
+  """
+  ```
+
+## Naming Conventions
+- Funciones: `snake_case` (ej: `build_universe_gio`)
+- Variables: `snake_case` (ej: `returns_m`, `ff5_factors`)
+- Constantes: `UPPER_SNAKE_CASE` (ej: `REQUIRED_FF5_COLUMNS`, `MIN_OBSERVATIONS`)
+- Clases: `PascalCase` (solo si se necesitan clases)
+- Módulos: `snake_case` (ej: `data_loader.py`, `universe_gio.py`)
+
+## Imports
+- Agrupar imports: stdlib, third-party, local
+- Orden alfabético dentro de cada grupo
+- Ejemplo:
+  ```python
+  import warnings
+  from io import BytesIO
+  
+  import numpy as np
+  import pandas as pd
+  import requests
+  
+  from .factors import estimate_ff5_betas
+  ```
+
+## Manejo de Errores
+- Usar excepciones específicas: `ValueError`, `RuntimeError`
+- Incluir mensajes descriptivos que expliquen el problema
+- Validar inputs al inicio de funciones
+- Ejemplo:
+  ```python
+  if len(common_dates) == 0:
+      raise ValueError(
+          "No hay fechas en común entre returns_m y ff5_factors después de alineación."
+      )
+  ```

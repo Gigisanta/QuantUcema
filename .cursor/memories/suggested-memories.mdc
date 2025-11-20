@@ -1,0 +1,75 @@
+# Memorias Sugeridas para Cursor
+
+Este documento lista memorias recomendadas que deberían crearse manualmente en Cursor Settings > Rules, o que el agente puede crear automáticamente durante conversaciones.
+
+## Memorias sobre Estructura del Proyecto
+
+### Estructura Modular
+- **Memoria**: "El proyecto ff5_portfolio está organizado en módulos separados: data_loader (descarga), factors (FF5), universe_gio (stock picking), optimization (carteras), pipeline (orquestador). Cada módulo tiene una responsabilidad única."
+- **Por qué**: Ayuda al agente a entender dónde colocar código nuevo y mantener separación de responsabilidades
+
+### API Pública
+- **Memoria**: "Solo las funciones de alto nivel se exportan en ff5_portfolio/__init__.py. Funciones internas usan prefijo _ y no se exportan."
+- **Por qué**: Mantiene la API limpia y evita exponer implementación interna
+
+## Memorias sobre Convenciones de Código
+
+### Type Hints Obligatorios
+- **Memoria**: "Todas las funciones en ff5_portfolio deben tener type hints completos usando tipos de pandas (pd.DataFrame, pd.Series) y sintaxis Python 3.10+ (| None en lugar de Optional)."
+- **Por qué**: Mejora la legibilidad y permite mejor autocompletado/verificación de tipos
+
+### Docstrings Google Style
+- **Memoria**: "Todas las funciones públicas deben tener docstrings en formato Google style con secciones Parameters, Returns, y Raises cuando aplique. Los comentarios explican 'por qué', no 'cómo'."
+- **Por qué**: Mantiene documentación consistente y útil
+
+### Naming Conventions
+- **Memoria**: "En ff5_portfolio: funciones/variables en snake_case, constantes en UPPER_SNAKE_CASE, sufijo _m para mensual, _annual para anual. Ejemplos: returns_m, ff5_factors, REQUIRED_FF5_COLUMNS."
+- **Por qué**: Consistencia en naming facilita lectura y mantenimiento
+
+## Memorias sobre Datos Financieros
+
+### Formato de Retornos
+- **Memoria**: "Los retornos en ff5_portfolio siempre están en decimales (0.01 = 1%), nunca en porcentajes. DataFrames de retornos tienen fechas como index y tickers como columns."
+- **Por qué**: Evita errores de conversión y mantiene consistencia
+
+### Factores FF5
+- **Memoria**: "Los factores FF5 deben tener exactamente estas columnas: ['Mkt-RF', 'SMB', 'HML', 'RMW', 'CMA', 'RF']. Siempre validar que todas estén presentes antes de usar."
+- **Por qué**: Previene errores en tiempo de ejecución por columnas faltantes
+
+### Alineación de Datos
+- **Memoria**: "Siempre alinear fechas (index.intersection) y tickers (columns.intersection) antes de operaciones entre DataFrames. Validar que hay datos comunes antes de proceder."
+- **Por qué**: Evita errores de índices no alineados
+
+## Memorias sobre Optimización
+
+### Validación de Constraints
+- **Memoria**: "Antes de optimizar carteras, validar que w_max * n >= 1.0 para solución factible. Usar scipy.optimize.minimize con método SLSQP. Pesos deben sumar 1.0."
+- **Por qué**: Previene errores de optimización infactible
+
+## Memorias sobre Testing
+
+### Estructura de Tests
+- **Memoria**: "Los tests en ff5_portfolio usan clases Test<FunctionName> para agrupar tests relacionados. Usar fixtures de pytest (sample_ff5_factors, sample_returns) con np.random.seed(42) para reproducibilidad."
+- **Por qué**: Mantiene tests organizados y reproducibles
+
+## Memorias sobre Principios de Diseño
+
+### DRY y Modularidad
+- **Memoria**: "En ff5_portfolio, evitar duplicación de código. Si lógica aparece 2+ veces, extraer a función helper. Funciones deben ser pequeñas (~40-50 líneas) con una sola responsabilidad."
+- **Por qué**: Mantiene código mantenible y fácil de modificar
+
+### Validación Temprana
+- **Memoria**: "En ff5_portfolio, validar inputs al inicio de funciones con mensajes de error descriptivos. Usar ValueError para inputs inválidos, RuntimeError para errores de ejecución."
+- **Por qué**: Falla rápido con mensajes claros facilita debugging
+
+## Cómo Crear Estas Memorias
+
+1. **Automáticamente**: Durante conversaciones, el agente puede crear memorias cuando detecte información importante
+2. **Manualmente**: Ir a Cursor Settings > Rules > Memories y crear manualmente
+3. **Aprobación**: Las memorias automáticas requieren aprobación antes de guardarse
+
+## Notas
+
+- Estas memorias son específicas del proyecto ff5_portfolio
+- Se aplican solo dentro del contexto de este repositorio
+- Pueden actualizarse cuando cambien las convenciones del proyecto

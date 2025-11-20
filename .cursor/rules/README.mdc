@@ -1,0 +1,40 @@
+---
+alwaysApply: true
+---
+
+# Reglas de Cursor para ff5_portfolio
+
+Este directorio contiene reglas específicas del proyecto que guían al agente de Cursor para mantener consistencia y calidad en el código.
+
+## Estructura
+
+- **`python-standards.mdc`**: Estándares Python (type hints, docstrings, naming, imports)
+- **`quantitative-finance.mdc`**: Convenciones específicas de finanzas cuantitativas (estructura de datos, conversiones, validaciones)
+- **`project-structure.mdc`**: Organización del proyecto y arquitectura de módulos
+- **`code-quality.mdc`**: Principios de calidad de código (DRY, funciones pequeñas, legibilidad)
+- **`testing.mdc`**: Guías de testing con pytest
+
+## Organización
+
+- **Reglas**: Este directorio (`.cursor/rules/`) contiene todas las reglas del proyecto
+- **Memorias**: Ver `.cursor/memories/` para memorias recomendadas
+
+## Uso
+
+Estas reglas se aplican automáticamente cuando trabajas en este proyecto. El agente de Cursor las lee y las usa como contexto para:
+
+- Generar código consistente con las convenciones del proyecto
+- Sugerir mejoras alineadas con los estándares establecidos
+- Mantener coherencia en estilo y estructura
+
+## Actualización
+
+Las reglas deben actualizarse cuando:
+- Se cambian convenciones del proyecto
+- Se adoptan nuevos estándares
+- Se identifican patrones que deben documentarse
+
+## Referencias
+
+- [Documentación de Cursor Rules](https://docs.cursor.com/es/context/rules)
+- [Documentación de Cursor Memories](https://docs.cursor.com/es/context/memories)

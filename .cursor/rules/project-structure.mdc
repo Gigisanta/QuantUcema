@@ -1,0 +1,97 @@
+---
+alwaysApply: true
+---
+
+# Estructura del Proyecto ff5_portfolio
+
+## Organización de Módulos
+
+### Módulo Principal: `ff5_portfolio/`
+- **`__init__.py`**: Expone solo la API pública del módulo
+- **`data_loader.py`**: Funciones de descarga de datos (yfinance, Ken French)
+- **`factors.py`**: Estimación de betas FF5 y construcción de retornos esperados
+- **`universe_gio.py`**: Stock picking cuantitativo (construcción de universo)
+- **`optimization.py`**: Optimización de carteras (Sharpe, Information Ratio)
+- **`pipeline.py`**: Orquestador principal que ejecuta todo el flujo
+
+### Principio de Separación
+- **Datos**: `data_loader.py` maneja toda la descarga y normalización
+- **Modelo**: `factors.py` contiene la lógica del modelo FF5
+- **Selección**: `universe_gio.py` implementa el stock picking
+- **Optimización**: `optimization.py` contiene algoritmos de optimización
+- **Orquestación**: `pipeline.py` coordina todo sin duplicar lógica
+
+## API Pública
+
+### Exports en `__init__.py`
+Solo exponer funciones de alto nivel y utilidades esenciales:
+- `estimate_ff5_betas`
+- `build_expected_returns_ff5`
+- `build_universe_gio`
+- `optimize_max_sharpe`
+- `optimize_max_information_ratio`
+- `build_gio_portfolios`
+- Funciones de `data_loader` (descarga de datos)
+
+### Funciones Internas
+- Prefijar con `_` si son helpers privados (ej: `_coerce_to_prices`, `_normalize_tickers`)
+- No exportar funciones internas en `__init__.py`
+
+## Estructura de Directorios
+
+```
+Ucema/
+├── app.py                    # UI Streamlit (raíz)
+├── ff5_portfolio/           # Módulo principal
+├── tests/                    # Tests unitarios (test_*.py)
+├── examples/                 # Ejemplos de uso
+└── docs/                     # Documentación adicional
+```
+
+## Convenciones de Archivos
+
+### Tests
+- Ubicación: `tests/`
+- Naming: `test_<module_name>.py`
+- Estructura: Usar clases `Test<ClassName>` y fixtures de pytest
+- Ejemplo: `tests/test_ff5_portfolio.py` para tests del módulo principal
+
+### Ejemplos
+- Ubicación: `examples/`
+- Incluir README explicando cómo ejecutar
+- Usar datos sintéticos cuando sea posible para reproducibilidad
+
+### Documentación
+- `Readme.md`: Documentación principal en raíz
+- `STRUCTURE.md`: Descripción de estructura del proyecto
+- `docs/`: Documentación adicional (prompts históricos, análisis)
+
+## Dependencias Externas
+
+### Core
+- `pandas>=1.5.0`: Manipulación de datos
+- `numpy>=1.21.0`: Cálculos numéricos
+- `statsmodels>=0.13.0`: Regresiones OLS
+- `scipy>=1.9.0`: Optimización
+
+### Datos
+- `yfinance>=0.2.0`: Descarga de precios
+- `requests>=2.31.0`: Descarga de factores FF5
+
+### UI (Opcional)
+- `streamlit>=1.28.0`: Interfaz web
+
+### Visualización (Opcional)
+- `matplotlib>=3.7.0`
+- `seaborn>=0.12.0`
+
+### Testing
+- `pytest>=7.0.0`
+
+## Principios de Diseño
+
+1. **Modularidad**: Cada módulo tiene una responsabilidad única
+2. **Reusabilidad**: Funciones independientes, fáciles de integrar en notebooks
+3. **Separación de datos**: El módulo trabaja con DataFrames ya preparados
+4. **API clara**: Funciones de alto nivel bien documentadas
+5. **Flexibilidad**: Permitir usar datos propios o descarga automática
