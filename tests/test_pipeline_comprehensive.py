@@ -13,7 +13,7 @@ from ff5_portfolio.pipeline import build_gio_portfolios, build_gio_portfolios_wi
 @pytest.fixture
 def complete_dataset():
     """Dataset completo para tests de pipeline."""
-    dates = pd.date_range("2020-01-01", periods=48, freq="M")
+    dates = pd.date_range("2020-01-01", periods=48, freq=pd.offsets.MonthEnd())
     np.random.seed(42)
     
     tickers = ["AAPL", "MSFT", "GOOGL", "AMZN", "TSLA", "META", "NVDA", "JPM", "V", "WMT"]
@@ -340,7 +340,7 @@ class TestBuildGioPortfoliosComprehensive:
         returns, ff5_factors, meta, benchmark = complete_dataset
         # Cambiar fechas de returns
         returns_partial = returns.copy()
-        returns_partial.index = pd.date_range("2020-06-01", periods=len(returns_partial), freq="M")
+        returns_partial.index = pd.date_range("2020-06-01", periods=len(returns_partial), freq=pd.offsets.MonthEnd())
         
         result = build_gio_portfolios(
             returns_m=returns_partial,

@@ -13,7 +13,7 @@ from ff5_portfolio.universe_gio import build_universe_gio
 @pytest.fixture
 def large_dataset():
     """Dataset grande para tests."""
-    dates = pd.date_range("2020-01-01", periods=60, freq="M")
+    dates = pd.date_range("2020-01-01", periods=60, freq=pd.offsets.MonthEnd())
     np.random.seed(42)
     
     # Crear 20 tickers con diferentes características

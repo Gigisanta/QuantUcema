@@ -126,7 +126,7 @@ class TestDownloadStockDataComprehensive:
     @patch("ff5_portfolio.data_loader.sleep")
     def test_with_different_batch_sizes(self, mock_sleep, mock_download):
         """Test con diferentes tamaños de batch."""
-        dates = pd.date_range("2020-01-01", periods=30, freq="ME")
+        dates = pd.date_range("2020-01-01", periods=30, freq=pd.offsets.MonthEnd())
         np.random.seed(42)
         prices = 100 * (1 + np.random.normal(0.01, 0.05, len(dates))).cumprod()
         
@@ -149,7 +149,7 @@ class TestDownloadStockDataComprehensive:
     @patch("ff5_portfolio.data_loader.sleep")
     def test_with_high_nan_ratio(self, mock_sleep, mock_download):
         """Test con series con muchos NaN."""
-        dates = pd.date_range("2020-01-01", periods=30, freq="ME")
+        dates = pd.date_range("2020-01-01", periods=30, freq=pd.offsets.MonthEnd())
         # Crear precios con algunos NaN pero suficientes datos válidos
         prices = 100 * (1 + np.random.normal(0.01, 0.05, len(dates))).cumprod()
         prices_series = pd.Series(prices, index=dates)

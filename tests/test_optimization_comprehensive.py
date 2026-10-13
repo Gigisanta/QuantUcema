@@ -222,7 +222,7 @@ class TestOptimizeMaxInformationRatioComprehensive:
     @pytest.fixture
     def sample_returns(self):
         """Retornos mensuales de ejemplo."""
-        dates = pd.date_range("2020-01-01", periods=36, freq="M")
+        dates = pd.date_range("2020-01-01", periods=36, freq=pd.offsets.MonthEnd())
         np.random.seed(42)
         return pd.DataFrame(
             np.random.normal(0.01, 0.05, (36, 5)),
@@ -327,7 +327,7 @@ class TestOptimizeMaxInformationRatioComprehensive:
 
     def test_with_very_short_time_series(self):
         """Test con serie temporal muy corta."""
-        dates = pd.date_range("2020-01-01", periods=12, freq="M")
+        dates = pd.date_range("2020-01-01", periods=12, freq=pd.offsets.MonthEnd())
         returns = pd.DataFrame(
             np.random.normal(0.01, 0.05, (12, 3)),
             index=dates,
