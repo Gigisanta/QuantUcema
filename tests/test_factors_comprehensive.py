@@ -18,7 +18,7 @@ from ff5_portfolio.factors import (
 @pytest.fixture
 def large_ff5_factors():
     """Factores FF5 con muchos meses (60 meses)."""
-    dates = pd.date_range("2020-01-01", periods=60, freq="M")
+    dates = pd.date_range("2020-01-01", periods=60, freq=pd.offsets.MonthEnd())
     np.random.seed(42)
     return pd.DataFrame(
         {
@@ -198,7 +198,7 @@ class TestEstimateFF5BetasComprehensive:
 
     def test_partial_date_overlap(self, large_ff5_factors):
         """Test con solapamiento parcial de fechas."""
-        dates_returns = pd.date_range("2020-06-01", periods=30, freq="M")
+        dates_returns = pd.date_range("2020-06-01", periods=30, freq=pd.offsets.MonthEnd())
         returns = pd.DataFrame(
             np.random.normal(0.01, 0.05, (30, 5)),
             index=dates_returns,
@@ -320,7 +320,7 @@ class TestBuildExpectedReturnsFF5Comprehensive:
 
     def test_factors_missing_columns(self):
         """Test con factores que faltan columnas."""
-        dates = pd.date_range("2020-01-01", periods=24, freq="M")
+        dates = pd.date_range("2020-01-01", periods=24, freq=pd.offsets.MonthEnd())
         betas = pd.DataFrame(
             {
                 "Mkt-RF": [1.0],

@@ -16,7 +16,7 @@ print("=" * 60)
 
 # 1. Generar retornos mensuales de activos (24 meses, 10 tickers)
 print("\n1. Generando retornos mensuales de activos...")
-dates = pd.date_range("2020-01-01", periods=24, freq="M")
+dates = pd.date_range("2020-01-01", periods=24, freq=pd.offsets.MonthEnd())
 tickers = ["AAPL", "MSFT", "GOOGL", "AMZN", "TSLA", "META", "NVDA", "JPM", "V", "WMT"]
 
 returns_m = pd.DataFrame(

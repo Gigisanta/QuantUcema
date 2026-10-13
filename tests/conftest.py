@@ -18,7 +18,7 @@ def random_seed():
 @pytest.fixture
 def standard_ff5_factors():
     """Factores FF5 estándar para tests (48 meses)."""
-    dates = pd.date_range("2020-01-01", periods=48, freq="M")
+    dates = pd.date_range("2020-01-01", periods=48, freq=pd.offsets.MonthEnd())
     np.random.seed(42)
     return pd.DataFrame(
         {

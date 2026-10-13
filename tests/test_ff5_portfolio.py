@@ -19,7 +19,7 @@ from ff5_portfolio import (
 @pytest.fixture
 def sample_ff5_factors():
     """Factores FF5 de ejemplo (24 meses)."""
-    dates = pd.date_range("2020-01-01", periods=24, freq="M")
+    dates = pd.date_range("2020-01-01", periods=24, freq=pd.offsets.MonthEnd())
     np.random.seed(42)
     return pd.DataFrame(
         {
@@ -111,7 +111,7 @@ class TestEstimateFF5Betas:
 
     def test_no_common_dates(self, sample_returns):
         """Test que falla correctamente sin fechas en común."""
-        dates = pd.date_range("2025-01-01", periods=24, freq="M")
+        dates = pd.date_range("2025-01-01", periods=24, freq=pd.offsets.MonthEnd())
         bad_factors = pd.DataFrame(
             {
                 "Mkt-RF": [0.01] * 24,
@@ -283,7 +283,7 @@ class TestOptimizeMaxInformationRatio:
 
     def test_no_common_dates(self, sample_returns):
         """Test que falla sin fechas en común."""
-        dates = pd.date_range("2025-01-01", periods=24, freq="M")
+        dates = pd.date_range("2025-01-01", periods=24, freq=pd.offsets.MonthEnd())
         benchmark = pd.Series([0.01] * 24, index=dates)
         mu_expected = pd.Series([0.10] * 5, index=sample_returns.columns)
         with pytest.raises(ValueError, match="No hay fechas en común"):

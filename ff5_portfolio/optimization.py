@@ -135,11 +135,11 @@ def optimize_max_sharpe(
 
     # Optimizar
     logger.debug(
-        "Iniciando optimización IR: %d activos, bounds [%.2f, %.2f], benchmark retorno=%.2f%%",
+        "Iniciando optimización Sharpe: %d activos, bounds [%.2f, %.2f], rf=%.2f%%",
         n,
         w_min,
         w_max_effective,
-        benchmark_annual * 100,
+        rf * 100,
     )
     result = minimize(
         objective,
@@ -151,7 +151,7 @@ def optimize_max_sharpe(
     )
 
     if not result.success:
-        logger.error("Optimización IR falló: %s", result.message)
+        logger.error("Optimización Sharpe falló: %s", result.message)
         raise RuntimeError(
             f"Optimización falló: {result.message}. "
             f"Intentar ajustar parámetros o verificar datos de entrada."
@@ -164,16 +164,15 @@ def optimize_max_sharpe(
     
     # Calcular métricas del resultado
     portfolio_return = w_opt @ mu_arr
-    alpha = portfolio_return - benchmark_annual
-    te = np.sqrt(w_opt @ cov_diff @ w_opt)
-    ir = alpha / te if te > 1e-8 else 0.0
+    vol = np.sqrt(w_opt @ cov_arr @ w_opt)
+    sharpe = (portfolio_return - rf) / vol if vol > 1e-8 else 0.0
     active_positions = (w_opt > 1e-4).sum()
     
     logger.info(
-        "Optimización IR completada: IR=%.3f, alpha=%.2f%%, TE=%.2f%%, posiciones activas=%d",
-        ir,
-        alpha * 100,
-        te * 100,
+        "Optimización Sharpe completada: Sharpe=%.3f, ret=%.2f%%, vol=%.2f%%, posiciones activas=%d",
+        sharpe,
+        portfolio_return * 100,
+        vol * 100,
         active_positions,
     )
 

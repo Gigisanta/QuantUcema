@@ -21,7 +21,7 @@ class TestEndToEndIntegration:
     @pytest.fixture
     def synthetic_data(self):
         """Crear datos sintéticos completos."""
-        dates = pd.date_range("2020-01-01", periods=48, freq="M")
+        dates = pd.date_range("2020-01-01", periods=48, freq=pd.offsets.MonthEnd())
         np.random.seed(42)
         
         tickers = ["AAPL", "MSFT", "GOOGL", "AMZN", "TSLA", "META", "NVDA", "JPM", "V", "WMT"]
@@ -182,7 +182,7 @@ class TestEndToEndIntegration:
 
     def test_pipeline_with_minimal_data(self):
         """Test con datos mínimos."""
-        dates = pd.date_range("2020-01-01", periods=24, freq="M")
+        dates = pd.date_range("2020-01-01", periods=24, freq=pd.offsets.MonthEnd())
         np.random.seed(42)
         
         returns = pd.DataFrame(
@@ -226,7 +226,7 @@ class TestDataLoaderIntegration:
         """Test pipeline usando funciones de data_loader mockeadas."""
         from unittest.mock import patch
         
-        dates = pd.date_range("2020-01-01", periods=36, freq="M")
+        dates = pd.date_range("2020-01-01", periods=36, freq=pd.offsets.MonthEnd())
         np.random.seed(42)
         
         # Mock de yfinance

@@ -56,7 +56,7 @@ class TestDownloadStockData:
     def test_basic_download(self, mock_sleep, mock_download):
         """Test descarga básica de datos."""
         # Mock de datos de yfinance - generar suficientes meses
-        dates = pd.date_range("2020-01-01", periods=30, freq="ME")
+        dates = pd.date_range("2020-01-01", periods=30, freq=pd.offsets.MonthEnd())
         np.random.seed(42)
         prices_aapl = 100 * (1 + np.random.normal(0.01, 0.05, len(dates))).cumprod()
         prices_msft = 200 * (1 + np.random.normal(0.01, 0.05, len(dates))).cumprod()
@@ -95,7 +95,7 @@ class TestDownloadStockData:
 
     def test_local_cache_reuses_returns(self, monkeypatch, tmp_path):
         """Test que el cache local evita descargas repetidas."""
-        dates = pd.date_range("2019-12-31", periods=36, freq="ME")
+        dates = pd.date_range("2019-12-31", periods=36, freq=pd.offsets.MonthEnd())
         sample_returns = pd.Series(
             np.random.normal(0.01, 0.02, len(dates)),
             index=dates,
